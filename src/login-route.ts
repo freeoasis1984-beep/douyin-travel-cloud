@@ -30,12 +30,22 @@ export function registerLoginRoute(router: any) {
     }
 
     try {
-      const resp = await axios.get("https://developer.toutiao.com/api/apps/v2/jscode2session", {
-        params: { appid, secret, code },
-        timeout: 10000
-      });
-
-      const payload = resp.data as Record<string, unknown>;
+      // v2 必须用 POST + JSON；用 GET 会 404，小程序端会看到 502 + axios 404 文案
+      let payload: Record<string, unknown>;
+      try {
+        const resp = await axios.post(
+          "https://developer.toutiao.com/api/apps/v2/jscode2session",
+          { appid, secret, code },
+          { timeout: 10000, headers: { "Content-Type": "application/json" } }
+        );
+        payload = resp.data as Record<string, unknown>;
+      } catch {
+        const resp = await axios.get("https://developer.toutiao.com/api/apps/jscode2session", {
+          params: { appid, secret, code },
+          timeout: 10000
+        });
+        payload = resp.data as Record<string, unknown>;
+      }
       const errNo = payload.err_no as number | undefined;
       const tips = (payload.err_tips || payload.err_msg || "") as string;
 
